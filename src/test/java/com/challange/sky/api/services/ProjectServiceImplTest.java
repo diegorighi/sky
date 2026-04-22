@@ -1,7 +1,7 @@
 package com.challange.sky.api.services;
 
 import com.challange.sky.api.domain.dto.inbound.CreateProjectRequest;
-import com.challange.sky.api.domain.dto.outbound.ProjectResponse;
+import com.challange.sky.api.domain.dto.outbound.ProjectProjection;
 import com.challange.sky.api.domain.entities.Project;
 import com.challange.sky.api.domain.exceptions.DuplicateResourceException;
 import com.challange.sky.api.domain.exceptions.ResourceNotFoundException;
@@ -16,7 +16,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -46,17 +45,19 @@ class ProjectServiceImplTest {
         void shouldCreateProjectSuccessfully() {
             var request = new CreateProjectRequest("PRJ-1", "Project Alpha", "A description");
             var project = new Project("PRJ-1", "Project Alpha", "A description");
-            var response = new ProjectResponse("PRJ-1", "Project Alpha", "A description", LocalDateTime.now(), LocalDateTime.now());
+            var projection = mock(ProjectProjection.class);
+            when(projection.getId()).thenReturn("PRJ-1");
+            when(projection.getName()).thenReturn("Project Alpha");
 
             when(projectRepository.existsById("PRJ-1")).thenReturn(false);
             when(projectMapper.toEntity(request)).thenReturn(project);
             when(projectRepository.save(project)).thenReturn(project);
-            when(projectMapper.toResponse(project)).thenReturn(response);
+            when(projectRepository.findProjectedById("PRJ-1")).thenReturn(Optional.of(projection));
 
-            ProjectResponse result = projectService.createProject(request);
+            ProjectProjection result = projectService.createProject(request);
 
-            assertThat(result.id()).isEqualTo("PRJ-1");
-            assertThat(result.name()).isEqualTo("Project Alpha");
+            assertThat(result.getId()).isEqualTo("PRJ-1");
+            assertThat(result.getName()).isEqualTo("Project Alpha");
             verify(projectRepository).save(project);
         }
 
@@ -78,23 +79,22 @@ class ProjectServiceImplTest {
     class GetProjectById {
 
         @Test
-        @DisplayName("should return project when found")
+        @DisplayName("should return project projection when found")
         void shouldReturnProjectWhenFound() {
-            var project = new Project("PRJ-1", "Project Alpha", "Desc");
-            var response = new ProjectResponse("PRJ-1", "Project Alpha", "Desc", LocalDateTime.now(), LocalDateTime.now());
+            var projection = mock(ProjectProjection.class);
+            when(projection.getId()).thenReturn("PRJ-1");
 
-            when(projectRepository.findById("PRJ-1")).thenReturn(Optional.of(project));
-            when(projectMapper.toResponse(project)).thenReturn(response);
+            when(projectRepository.findProjectedById("PRJ-1")).thenReturn(Optional.of(projection));
 
-            ProjectResponse result = projectService.getProjectById("PRJ-1");
+            ProjectProjection result = projectService.getProjectById("PRJ-1");
 
-            assertThat(result.id()).isEqualTo("PRJ-1");
+            assertThat(result.getId()).isEqualTo("PRJ-1");
         }
 
         @Test
         @DisplayName("should throw ResourceNotFoundException when not found")
         void shouldThrowWhenNotFound() {
-            when(projectRepository.findById("PRJ-99")).thenReturn(Optional.empty());
+            when(projectRepository.findProjectedById("PRJ-99")).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> projectService.getProjectById("PRJ-99"))
                     .isInstanceOf(ResourceNotFoundException.class);
@@ -108,16 +108,12 @@ class ProjectServiceImplTest {
         @Test
         @DisplayName("should return all projects")
         void shouldReturnAllProjects() {
-            var p1 = new Project("PRJ-1", "Alpha", null);
-            var p2 = new Project("PRJ-2", "Beta", null);
-            var r1 = new ProjectResponse("PRJ-1", "Alpha", null, LocalDateTime.now(), LocalDateTime.now());
-            var r2 = new ProjectResponse("PRJ-2", "Beta", null, LocalDateTime.now(), LocalDateTime.now());
+            var p1 = mock(ProjectProjection.class);
+            var p2 = mock(ProjectProjection.class);
 
-            when(projectRepository.findAll()).thenReturn(List.of(p1, p2));
-            when(projectMapper.toResponse(p1)).thenReturn(r1);
-            when(projectMapper.toResponse(p2)).thenReturn(r2);
+            when(projectRepository.findAllProjected()).thenReturn(List.of(p1, p2));
 
-            List<ProjectResponse> result = projectService.getAllProjects();
+            List<ProjectProjection> result = projectService.getAllProjects();
 
             assertThat(result).hasSize(2);
         }

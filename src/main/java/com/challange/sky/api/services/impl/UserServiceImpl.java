@@ -2,13 +2,12 @@ package com.challange.sky.api.services.impl;
 
 import com.challange.sky.api.domain.dto.inbound.CreateUserRequest;
 import com.challange.sky.api.domain.dto.inbound.UpdateUserRequest;
-import com.challange.sky.api.domain.dto.outbound.ProjectResponse;
-import com.challange.sky.api.domain.dto.outbound.UserResponse;
+import com.challange.sky.api.domain.dto.outbound.ProjectProjection;
+import com.challange.sky.api.domain.dto.outbound.UserProjection;
 import com.challange.sky.api.domain.entities.Project;
 import com.challange.sky.api.domain.entities.User;
 import com.challange.sky.api.domain.exceptions.DuplicateResourceException;
 import com.challange.sky.api.domain.exceptions.ResourceNotFoundException;
-import com.challange.sky.api.domain.mappers.ProjectMapper;
 import com.challange.sky.api.domain.mappers.UserMapper;
 import com.challange.sky.api.repositories.ProjectRepository;
 import com.challange.sky.api.repositories.UserRepository;
@@ -29,24 +28,21 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final ProjectRepository projectRepository;
     private final UserMapper userMapper;
-    private final ProjectMapper projectMapper;
     private final PasswordEncoder passwordEncoder;
 
     public UserServiceImpl(UserRepository userRepository,
                            ProjectRepository projectRepository,
                            UserMapper userMapper,
-                           ProjectMapper projectMapper,
                            PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.projectRepository = projectRepository;
         this.userMapper = userMapper;
-        this.projectMapper = projectMapper;
         this.passwordEncoder = passwordEncoder;
     }
 
     @Override
     @Transactional
-    public UserResponse createUser(CreateUserRequest request) {
+    public UserProjection createUser(CreateUserRequest request) {
         if (userRepository.existsByEmail(request.email())) {
             throw new DuplicateResourceException("User", request.email());
         }
@@ -56,30 +52,30 @@ public class UserServiceImpl implements UserService {
         User saved = userRepository.save(user);
 
         log.info("User created with id: {}", saved.getId());
-        return userMapper.toResponse(saved);
+        return findProjectionOrThrow(saved.getId());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public UserResponse getUserById(Long id) {
-        User user = findUserOrThrow(id);
-        return userMapper.toResponse(user);
+    public UserProjection getUserById(Long id) {
+        return findProjectionOrThrow(id);
     }
 
     @Override
     @Transactional
-    public UserResponse updateUser(Long id, UpdateUserRequest request) {
-        User user = findUserOrThrow(id);
+    public UserProjection updateUser(Long id, UpdateUserRequest request) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", id));
 
         String encodedPassword = request.password() != null
                 ? passwordEncoder.encode(request.password())
                 : null;
 
         userMapper.updateEntity(user, request, encodedPassword);
-        User updated = userRepository.save(user);
+        userRepository.save(user);
 
-        log.info("User updated with id: {}", updated.getId());
-        return userMapper.toResponse(updated);
+        log.info("User updated with id: {}", id);
+        return findProjectionOrThrow(id);
     }
 
     @Override
@@ -94,22 +90,23 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserResponse addProjectToUser(Long userId, String projectId) {
-        User user = findUserOrThrow(userId);
+    public void addProjectToUser(Long userId, String projectId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project", projectId));
 
         user.addProject(project);
-        User updated = userRepository.save(user);
+        userRepository.save(user);
 
         log.info("Project {} linked to user {}", projectId, userId);
-        return userMapper.toResponse(updated);
     }
 
     @Override
     @Transactional
     public void removeProjectFromUser(Long userId, String projectId) {
-        User user = findUserOrThrow(userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project", projectId));
 
@@ -121,15 +118,15 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ProjectResponse> getUserProjects(Long userId) {
-        User user = findUserOrThrow(userId);
-        return user.getProjects().stream()
-                .map(projectMapper::toResponse)
-                .toList();
+    public List<ProjectProjection> getUserProjects(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new ResourceNotFoundException("User", userId);
+        }
+        return projectRepository.findProjectedByUserId(userId);
     }
 
-    private User findUserOrThrow(Long id) {
-        return userRepository.findById(id)
+    private UserProjection findProjectionOrThrow(Long id) {
+        return userRepository.findProjectedById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", id));
     }
 }

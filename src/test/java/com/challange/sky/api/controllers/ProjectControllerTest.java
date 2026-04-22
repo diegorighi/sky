@@ -1,7 +1,7 @@
 package com.challange.sky.api.controllers;
 
 import com.challange.sky.api.domain.dto.inbound.CreateProjectRequest;
-import com.challange.sky.api.domain.dto.outbound.ProjectResponse;
+import com.challange.sky.api.domain.dto.outbound.ProjectProjection;
 import com.challange.sky.api.domain.exceptions.ResourceNotFoundException;
 import com.challange.sky.api.services.ProjectService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
@@ -20,7 +21,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -39,16 +40,23 @@ class ProjectControllerTest {
     @MockitoBean
     private ProjectService projectService;
 
-    private final LocalDateTime now = LocalDateTime.now();
+    private static ProjectProjection stubProjection(String id, String name) {
+        return new ProjectProjection() {
+            public String getId() { return id; }
+            public String getName() { return name; }
+            public String getDescription() { return null; }
+            public LocalDateTime getCreatedAt() { return LocalDateTime.of(2026, 4, 20, 10, 0); }
+            public LocalDateTime getUpdatedAt() { return LocalDateTime.of(2026, 4, 20, 10, 0); }
+        };
+    }
 
     @Test
     @DisplayName("POST /api/v1/projects - should return 201")
     @WithMockUser
     void createProject_returns201() throws Exception {
         var request = new CreateProjectRequest("PRJ-1", "Project Alpha", "A great project");
-        var response = new ProjectResponse("PRJ-1", "Project Alpha", "A great project", now, now);
-
-        when(projectService.createProject(any())).thenReturn(response);
+        var projection = stubProjection("PRJ-1", "Project Alpha");
+        when(projectService.createProject(any())).thenReturn(projection);
 
         mockMvc.perform(post("/api/v1/projects")
                         .with(csrf())
@@ -77,8 +85,8 @@ class ProjectControllerTest {
     @DisplayName("GET /api/v1/projects/{id} - should return 200")
     @WithMockUser
     void getProjectById_returns200() throws Exception {
-        var response = new ProjectResponse("PRJ-1", "Alpha", "Desc", now, now);
-        when(projectService.getProjectById("PRJ-1")).thenReturn(response);
+        var projection = stubProjection("PRJ-1", "Alpha");
+        when(projectService.getProjectById("PRJ-1")).thenReturn(projection);
 
         mockMvc.perform(get("/api/v1/projects/PRJ-1"))
                 .andExpect(status().isOk())
@@ -99,9 +107,10 @@ class ProjectControllerTest {
     @DisplayName("GET /api/v1/projects - should return 200 with list")
     @WithMockUser
     void getAllProjects_returns200() throws Exception {
-        var r1 = new ProjectResponse("PRJ-1", "Alpha", null, now, now);
-        var r2 = new ProjectResponse("PRJ-2", "Beta", null, now, now);
-        when(projectService.getAllProjects()).thenReturn(List.of(r1, r2));
+        when(projectService.getAllProjects()).thenReturn(List.of(
+                stubProjection("PRJ-1", "Alpha"),
+                stubProjection("PRJ-2", "Beta")
+        ));
 
         mockMvc.perform(get("/api/v1/projects"))
                 .andExpect(status().isOk())

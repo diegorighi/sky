@@ -3,8 +3,6 @@ package com.challange.sky.api.integration;
 import com.challange.sky.api.domain.dto.inbound.CreateProjectRequest;
 import com.challange.sky.api.domain.dto.inbound.CreateUserRequest;
 import com.challange.sky.api.domain.dto.inbound.UpdateUserRequest;
-import com.challange.sky.api.domain.dto.outbound.ProjectResponse;
-import com.challange.sky.api.domain.dto.outbound.UserResponse;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -41,20 +40,19 @@ class UserIntegrationTest {
 
         // Create user
         var createRequest = new CreateUserRequest("integration@test.com", "password123", "Integration User");
-        var createResponse = client.postForEntity("/api/v1/users", createRequest, UserResponse.class);
+        var createResponse = client.postForEntity("/api/v1/users", createRequest, Map.class);
 
         assertThat(createResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(createResponse.getHeaders().getLocation()).isNotNull();
         assertThat(createResponse.getBody()).isNotNull();
 
-        Long userId = createResponse.getBody().id();
-        assertThat(userId).isNotNull();
-        assertThat(createResponse.getBody().email()).isEqualTo("integration@test.com");
+        var userId = ((Number) createResponse.getBody().get("id")).longValue();
+        assertThat(createResponse.getBody().get("email")).isEqualTo("integration@test.com");
 
         // Get user
-        var getResponse = client.getForEntity("/api/v1/users/" + userId, UserResponse.class);
+        var getResponse = client.getForEntity("/api/v1/users/" + userId, Map.class);
         assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(getResponse.getBody().name()).isEqualTo("Integration User");
+        assertThat(getResponse.getBody().get("name")).isEqualTo("Integration User");
 
         // Update user
         var updateRequest = new UpdateUserRequest("Updated User", null);
@@ -62,10 +60,10 @@ class UserIntegrationTest {
                 "/api/v1/users/" + userId,
                 HttpMethod.PUT,
                 new HttpEntity<>(updateRequest),
-                UserResponse.class
+                Map.class
         );
         assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(updateResponse.getBody().name()).isEqualTo("Updated User");
+        assertThat(updateResponse.getBody().get("name")).isEqualTo("Updated User");
 
         // Delete user
         var deleteResponse = client.exchange(
@@ -89,32 +87,32 @@ class UserIntegrationTest {
 
         // Create user
         var userRequest = new CreateUserRequest("project-user@test.com", "password123", "Project User");
-        var userResponse = client.postForEntity("/api/v1/users", userRequest, UserResponse.class);
-        Long userId = userResponse.getBody().id();
+        var userResponse = client.postForEntity("/api/v1/users", userRequest, Map.class);
+        var userId = ((Number) userResponse.getBody().get("id")).longValue();
 
         // Create project
         var projectRequest = new CreateProjectRequest("INT-PRJ-1", "Integration Project", "Test project");
-        var projectResponse = client.postForEntity("/api/v1/projects", projectRequest, ProjectResponse.class);
+        var projectResponse = client.postForEntity("/api/v1/projects", projectRequest, Map.class);
         assertThat(projectResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 
-        // Link project to user
+        // Link project to user (now returns 204)
         var linkResponse = client.postForEntity(
                 "/api/v1/users/" + userId + "/projects/INT-PRJ-1",
                 null,
-                UserResponse.class
+                Void.class
         );
-        assertThat(linkResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(linkResponse.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
 
         // List user projects
         var listResponse = client.exchange(
                 "/api/v1/users/" + userId + "/projects",
                 HttpMethod.GET,
                 null,
-                new ParameterizedTypeReference<List<ProjectResponse>>() {}
+                new ParameterizedTypeReference<List<Map<String, Object>>>() {}
         );
         assertThat(listResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(listResponse.getBody()).hasSize(1);
-        assertThat(listResponse.getBody().getFirst().id()).isEqualTo("INT-PRJ-1");
+        assertThat(listResponse.getBody().getFirst().get("id")).isEqualTo("INT-PRJ-1");
 
         // Unlink project
         var unlinkResponse = client.exchange(
@@ -125,14 +123,14 @@ class UserIntegrationTest {
         );
         assertThat(unlinkResponse.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
 
-        // Verify unlinked
-        var emptyListResponse = client.exchange(
+        // Verify empty
+        var emptyList = client.exchange(
                 "/api/v1/users/" + userId + "/projects",
                 HttpMethod.GET,
                 null,
-                new ParameterizedTypeReference<List<ProjectResponse>>() {}
+                new ParameterizedTypeReference<List<Map<String, Object>>>() {}
         );
-        assertThat(emptyListResponse.getBody()).isEmpty();
+        assertThat(emptyList.getBody()).isEmpty();
     }
 
     @Test
@@ -150,7 +148,7 @@ class UserIntegrationTest {
         var client = authenticatedClient();
 
         var request = new CreateUserRequest("duplicate@test.com", "password123", "First");
-        client.postForEntity("/api/v1/users", request, UserResponse.class);
+        client.postForEntity("/api/v1/users", request, Map.class);
 
         var duplicateResponse = client.postForEntity("/api/v1/users", request, String.class);
         assertThat(duplicateResponse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);

@@ -2,8 +2,8 @@ package com.challange.sky.api.controllers;
 
 import com.challange.sky.api.domain.dto.inbound.CreateUserRequest;
 import com.challange.sky.api.domain.dto.inbound.UpdateUserRequest;
-import com.challange.sky.api.domain.dto.outbound.ProjectResponse;
-import com.challange.sky.api.domain.dto.outbound.UserResponse;
+import com.challange.sky.api.domain.dto.outbound.ProjectProjection;
+import com.challange.sky.api.domain.dto.outbound.UserProjection;
 import com.challange.sky.api.services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -30,28 +30,27 @@ public class UserController {
     @PostMapping
     @Operation(summary = "Create a new user")
     @ApiResponse(responseCode = "201", description = "User created successfully")
-    public ResponseEntity<UserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
-        UserResponse response = userService.createUser(request);
+    public ResponseEntity<UserProjection> createUser(@Valid @RequestBody CreateUserRequest request) {
+        UserProjection created = userService.createUser(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
-                .buildAndExpand(response.id())
+                .buildAndExpand(created.getId())
                 .toUri();
-        return ResponseEntity.created(location).body(response);
+        return ResponseEntity.created(location).body(created);
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get user by id")
-    public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
-        UserResponse user = userService.getUserById(id);
-        return ResponseEntity.ok(user);
+    public ResponseEntity<UserProjection> getUserById(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.getUserById(id));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update user information")
     @ApiResponse(responseCode = "200", description = "User updated successfully")
     @ApiResponse(responseCode = "404", description = "User not found")
-    public ResponseEntity<UserResponse> updateUser(@PathVariable Long id,
-                                                   @Valid @RequestBody UpdateUserRequest request) {
+    public ResponseEntity<UserProjection> updateUser(@PathVariable Long id,
+                                                     @Valid @RequestBody UpdateUserRequest request) {
         return ResponseEntity.ok(userService.updateUser(id, request));
     }
 
@@ -66,10 +65,11 @@ public class UserController {
 
     @PostMapping("/{userId}/projects/{projectId}")
     @Operation(summary = "Link a project to a user")
-    @ApiResponse(responseCode = "200", description = "Project linked successfully")
-    public ResponseEntity<UserResponse> addProjectToUser(@PathVariable Long userId,
-                                                         @PathVariable String projectId) {
-        return ResponseEntity.ok(userService.addProjectToUser(userId, projectId));
+    @ApiResponse(responseCode = "204", description = "Project linked successfully")
+    public ResponseEntity<Void> addProjectToUser(@PathVariable Long userId,
+                                                 @PathVariable String projectId) {
+        userService.addProjectToUser(userId, projectId);
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{userId}/projects/{projectId}")
@@ -84,7 +84,7 @@ public class UserController {
     @GetMapping("/{userId}/projects")
     @Operation(summary = "List projects associated with a user")
     @ApiResponse(responseCode = "200", description = "Projects retrieved successfully")
-    public ResponseEntity<List<ProjectResponse>> getUserProjects(@PathVariable Long userId) {
+    public ResponseEntity<List<ProjectProjection>> getUserProjects(@PathVariable Long userId) {
         return ResponseEntity.ok(userService.getUserProjects(userId));
     }
 }

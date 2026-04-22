@@ -1,15 +1,15 @@
 package com.challange.sky.api.services;
 
 import com.challange.sky.api.domain.dto.inbound.CreateProjectRequest;
-import com.challange.sky.api.domain.dto.outbound.ProjectResponse;
+import com.challange.sky.api.domain.dto.outbound.ProjectProjection;
 
 import java.util.List;
 
 public interface ProjectService {
 
-    ProjectResponse createProject(CreateProjectRequest request);
+    ProjectProjection createProject(CreateProjectRequest request);
 
-    ProjectResponse getProjectById(String id);
+    ProjectProjection getProjectById(String id);
 
-    List<ProjectResponse> getAllProjects();
+    List<ProjectProjection> getAllProjects();
 }

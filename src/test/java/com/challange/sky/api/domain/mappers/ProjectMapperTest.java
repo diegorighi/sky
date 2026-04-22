@@ -27,14 +27,4 @@ class ProjectMapperTest {
 
         assertNull(entity.getDescription());
     }
-
-    @Test
-    void testToResponse() {
-        var project = new Project("PROJ-1", "Test", "Desc");
-        var response = mapper.toResponse(project);
-
-        assertEquals("PROJ-1", response.id());
-        assertEquals("Test", response.name());
-        assertEquals("Desc", response.description());
-    }
 }

@@ -1,7 +1,7 @@
 package com.challange.sky.api.services.impl;
 
 import com.challange.sky.api.domain.dto.inbound.CreateProjectRequest;
-import com.challange.sky.api.domain.dto.outbound.ProjectResponse;
+import com.challange.sky.api.domain.dto.outbound.ProjectProjection;
 import com.challange.sky.api.domain.entities.Project;
 import com.challange.sky.api.domain.exceptions.DuplicateResourceException;
 import com.challange.sky.api.domain.exceptions.ResourceNotFoundException;
@@ -30,7 +30,7 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     @Transactional
-    public ProjectResponse createProject(CreateProjectRequest request) {
+    public ProjectProjection createProject(CreateProjectRequest request) {
         if (projectRepository.existsById(request.id())) {
             throw new DuplicateResourceException("Project", request.id());
         }
@@ -39,22 +39,20 @@ public class ProjectServiceImpl implements ProjectService {
         Project saved = projectRepository.save(project);
 
         log.info("Project created with id: {}", saved.getId());
-        return projectMapper.toResponse(saved);
+        return projectRepository.findProjectedById(saved.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Project", saved.getId()));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ProjectResponse getProjectById(String id) {
-        return projectRepository.findById(id)
-                .map(projectMapper::toResponse)
+    public ProjectProjection getProjectById(String id) {
+        return projectRepository.findProjectedById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project", id));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<ProjectResponse> getAllProjects() {
-        return projectRepository.findAll().stream()
-                .map(projectMapper::toResponse)
-                .toList();
+    public List<ProjectProjection> getAllProjects() {
+        return projectRepository.findAllProjected();
     }
 }

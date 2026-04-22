@@ -2,8 +2,8 @@ package com.challange.sky.api.controllers;
 
 import com.challange.sky.api.domain.dto.inbound.CreateUserRequest;
 import com.challange.sky.api.domain.dto.inbound.UpdateUserRequest;
-import com.challange.sky.api.domain.dto.outbound.ProjectResponse;
-import com.challange.sky.api.domain.dto.outbound.UserResponse;
+import com.challange.sky.api.domain.dto.outbound.ProjectProjection;
+import com.challange.sky.api.domain.dto.outbound.UserProjection;
 import com.challange.sky.api.domain.exceptions.ResourceNotFoundException;
 import com.challange.sky.api.services.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
@@ -23,8 +24,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -42,16 +42,23 @@ class UserControllerTest {
     @MockitoBean
     private UserService userService;
 
-    private final LocalDateTime now = LocalDateTime.now();
+    private static UserProjection stubUserProjection(Long id, String email, String name) {
+        return new UserProjection() {
+            public Long getId() { return id; }
+            public String getEmail() { return email; }
+            public String getName() { return name; }
+            public LocalDateTime getCreatedAt() { return LocalDateTime.of(2026, 4, 20, 10, 0); }
+            public LocalDateTime getUpdatedAt() { return LocalDateTime.of(2026, 4, 20, 10, 0); }
+        };
+    }
 
     @Test
     @DisplayName("POST /api/v1/users - should return 201")
     @WithMockUser
     void createUser_returns201() throws Exception {
         var request = new CreateUserRequest("john@example.com", "password123", "John");
-        var response = new UserResponse(1L, "john@example.com", "John", now, now);
-
-        when(userService.createUser(any())).thenReturn(response);
+        var projection = stubUserProjection(1L, "john@example.com", "John");
+        when(userService.createUser(any())).thenReturn(projection);
 
         mockMvc.perform(post("/api/v1/users")
                         .with(csrf())
@@ -80,8 +87,8 @@ class UserControllerTest {
     @DisplayName("GET /api/v1/users/{id} - should return 200")
     @WithMockUser
     void getUserById_returns200() throws Exception {
-        var response = new UserResponse(1L, "john@example.com", "John", now, now);
-        when(userService.getUserById(1L)).thenReturn(response);
+        var projection = stubUserProjection(1L, "john@example.com", "John");
+        when(userService.getUserById(1L)).thenReturn(projection);
 
         mockMvc.perform(get("/api/v1/users/1"))
                 .andExpect(status().isOk())
@@ -103,9 +110,8 @@ class UserControllerTest {
     @WithMockUser
     void updateUser_returns200() throws Exception {
         var request = new UpdateUserRequest("Jane", null);
-        var response = new UserResponse(1L, "john@example.com", "Jane", now, now);
-
-        when(userService.updateUser(eq(1L), any())).thenReturn(response);
+        var projection = stubUserProjection(1L, "john@example.com", "Jane");
+        when(userService.updateUser(eq(1L), any())).thenReturn(projection);
 
         mockMvc.perform(put("/api/v1/users/1")
                         .with(csrf())
@@ -133,22 +139,27 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/users/{userId}/projects/{projectId} - should return 200")
+    @DisplayName("POST /api/v1/users/{userId}/projects/{projectId} - should return 204")
     @WithMockUser
-    void addProjectToUser_returns200() throws Exception {
-        var response = new UserResponse(1L, "john@example.com", "John", now, now);
-        when(userService.addProjectToUser(1L, "PRJ-1")).thenReturn(response);
+    void addProjectToUser_returns204() throws Exception {
+        doNothing().when(userService).addProjectToUser(1L, "PRJ-1");
 
         mockMvc.perform(post("/api/v1/users/1/projects/PRJ-1").with(csrf()))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
     }
 
     @Test
     @DisplayName("GET /api/v1/users/{userId}/projects - should return 200")
     @WithMockUser
     void getUserProjects_returns200() throws Exception {
-        var projectResponse = new ProjectResponse("PRJ-1", "Alpha", "Desc", now, now);
-        when(userService.getUserProjects(1L)).thenReturn(List.of(projectResponse));
+        ProjectProjection proj = new ProjectProjection() {
+            public String getId() { return "PRJ-1"; }
+            public String getName() { return "Alpha"; }
+            public String getDescription() { return null; }
+            public LocalDateTime getCreatedAt() { return LocalDateTime.of(2026, 4, 20, 10, 0); }
+            public LocalDateTime getUpdatedAt() { return LocalDateTime.of(2026, 4, 20, 10, 0); }
+        };
+        when(userService.getUserProjects(1L)).thenReturn(List.of(proj));
 
         mockMvc.perform(get("/api/v1/users/1/projects"))
                 .andExpect(status().isOk())

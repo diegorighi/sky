@@ -1,7 +1,7 @@
 package com.challange.sky.api.controllers;
 
 import com.challange.sky.api.domain.dto.inbound.CreateProjectRequest;
-import com.challange.sky.api.domain.dto.outbound.ProjectResponse;
+import com.challange.sky.api.domain.dto.outbound.ProjectProjection;
 import com.challange.sky.api.services.ProjectService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -28,27 +28,27 @@ public class ProjectController {
     @PostMapping
     @Operation(summary = "Create a new project")
     @ApiResponse(responseCode = "201", description = "Project created successfully")
-    public ResponseEntity<ProjectResponse> createProject(@Valid @RequestBody CreateProjectRequest request) {
-        ProjectResponse response = projectService.createProject(request);
+    public ResponseEntity<ProjectProjection> createProject(@Valid @RequestBody CreateProjectRequest request) {
+        ProjectProjection created = projectService.createProject(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
-                .buildAndExpand(response.id())
+                .buildAndExpand(created.getId())
                 .toUri();
-        return ResponseEntity.created(location).body(response);
+        return ResponseEntity.created(location).body(created);
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Retrieve project by ID")
     @ApiResponse(responseCode = "200", description = "Project found")
     @ApiResponse(responseCode = "404", description = "Project not found")
-    public ResponseEntity<ProjectResponse> getProjectById(@PathVariable String id) {
+    public ResponseEntity<ProjectProjection> getProjectById(@PathVariable String id) {
         return ResponseEntity.ok(projectService.getProjectById(id));
     }
 
     @GetMapping
     @Operation(summary = "List all projects")
     @ApiResponse(responseCode = "200", description = "Projects retrieved successfully")
-    public ResponseEntity<List<ProjectResponse>> getAllProjects() {
+    public ResponseEntity<List<ProjectProjection>> getAllProjects() {
         return ResponseEntity.ok(projectService.getAllProjects());
     }
 }

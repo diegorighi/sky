@@ -18,18 +18,8 @@ class UserMapperTest {
         User entity = mapper.toEntity(request, "bcrypt_encoded");
 
         assertThat(entity.getEmail()).isEqualTo("test@test.com");
-        assertThat(entity.getPassword()).isEqualTo("bcrypt_encoded"); // already encoded
+        assertThat(entity.getPassword()).isEqualTo("bcrypt_encoded");
         assertThat(entity.getName()).isEqualTo("Test User");
-    }
-
-    @Test
-    void toResponse_shouldNotExposePassword() {
-        var user = new User("test@test.com", "secret_hash", "Test");
-        var response = mapper.toResponse(user);
-
-        assertThat(response.email()).isEqualTo("test@test.com");
-        assertThat(response.name()).isEqualTo("Test");
-        // password should not be in response
     }
 
     @Test
