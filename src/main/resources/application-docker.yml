@@ -1,5 +1,5 @@
 spring:
   datasource:
-    url: jdbc:postgresql://db:5432/skydb
-    username: skyuser
-    password: skypass
+    url: jdbc:postgresql://db:5432/${DB_NAME:skydb}
+    username: ${DB_USER:skyuser}
+    password: ${DB_PASSWORD}

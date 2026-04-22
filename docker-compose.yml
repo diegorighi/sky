@@ -2,15 +2,15 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: skydb
-      POSTGRES_USER: skyuser
-      POSTGRES_PASSWORD: skypass
+      POSTGRES_DB: ${DB_NAME:-skydb}
+      POSTGRES_USER: ${DB_USER:-skyuser}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U skyuser -d skydb"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-skyuser} -d ${DB_NAME:-skydb}"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -21,6 +21,11 @@ services:
       - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      DB_NAME: ${DB_NAME:-skydb}
+      DB_USER: ${DB_USER:-skyuser}
+      DB_PASSWORD: ${DB_PASSWORD}
+      APP_SECURITY_ADMIN_USERNAME: ${ADMIN_USERNAME:-sky-admin}
+      APP_SECURITY_ADMIN_PASSWORD: ${ADMIN_PASSWORD}
     depends_on:
       db:
         condition: service_healthy

@@ -1,5 +1,6 @@
 package com.challange.sky.api.configurations;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -39,10 +40,12 @@ public class SecurityConfig {
 
     // TODO: replace with database-backed UserDetailsService for production
     @Bean
-    public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder) {
+    public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder,
+                                                 @Value("${app.security.admin.username:sky-admin}") String username,
+                                                 @Value("${app.security.admin.password}") String password) {
         var admin = User.builder()
-                .username("sky-admin")
-                .password(passwordEncoder.encode("sky-password"))
+                .username(username)
+                .password(passwordEncoder.encode(password))
                 .roles("ADMIN")
                 .build();
         return new InMemoryUserDetailsManager(admin);

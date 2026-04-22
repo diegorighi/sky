@@ -11,6 +11,12 @@ spring:
   liquibase:
     enabled: false
 
+app:
+  security:
+    admin:
+      username: sky-admin
+      password: sky-password
+
 logging:
   level:
     com.challange.sky.api: DEBUG
