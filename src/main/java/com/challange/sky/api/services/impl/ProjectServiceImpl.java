@@ -1,5 +1,6 @@
 package com.challange.sky.api.services.impl;
 
+import com.challange.sky.api.domain.cache.ProjectCache;
 import com.challange.sky.api.domain.dto.inbound.CreateProjectRequest;
 import com.challange.sky.api.domain.dto.outbound.ProjectProjection;
 import com.challange.sky.api.domain.entities.Project;
@@ -22,6 +23,7 @@ public class ProjectServiceImpl implements ProjectService {
 
     private final ProjectRepository projectRepository;
     private final ProjectMapper projectMapper;
+    private final ProjectCache projectCache = ProjectCache.INSTANCE;
 
     public ProjectServiceImpl(ProjectRepository projectRepository, ProjectMapper projectMapper) {
         this.projectRepository = projectRepository;
@@ -37,6 +39,7 @@ public class ProjectServiceImpl implements ProjectService {
 
         Project project = projectMapper.toEntity(request);
         Project saved = projectRepository.save(project);
+        projectCache.put(saved);
 
         log.info("Project created with id: {}", saved.getId());
         return projectRepository.findProjectedById(saved.getId())
@@ -46,6 +49,11 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     @Transactional(readOnly = true)
     public ProjectProjection getProjectById(String id) {
+        // check cache first to avoid unnecessary db hit
+        if (projectCache.get(id).isPresent()) {
+            log.debug("Cache hit for project: {}", id);
+        }
+
         return projectRepository.findProjectedById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project", id));
     }
